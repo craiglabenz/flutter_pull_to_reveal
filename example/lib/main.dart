@@ -63,7 +63,8 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Center(
         child: PullToRevealTopItemList(
           revealWhenEmpty: widget.revealWhenEmpty,
-          itemsCount: _counter,
+          itemCount: _counter,
+          revealableHeight: 50,
           itemBuilder: (BuildContext context, int index) {
             if (_filter != null && _filter < index) {
               return Container();
@@ -76,6 +77,13 @@ class _MyHomePageState extends State<MyHomePage> {
                   child: Text('$index', key: Key('$index'), style: TextStyle(fontSize: 20)),
                 ),
               ),
+            );
+          },
+          dividerBuilder: (BuildContext context) {
+            return Container(
+              alignment: Alignment.topLeft,
+              padding: EdgeInsets.all(10),
+              child: Text('Items', style: Theme.of(context).textTheme.headline),
             );
           },
           topItemBuilder: (BuildContext context, Function opener, Function closer) {

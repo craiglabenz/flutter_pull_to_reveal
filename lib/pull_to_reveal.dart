@@ -25,10 +25,12 @@ Widget emptyTopBuilder(BuildContext context, RevealableToggler opener, Revealabl
 
 class PullToRevealTopItemList extends StatefulWidget {
   // Pass-thru to the eventual ListView for size-of-content optimizations
-  final int itemsCount;
+  final int itemCount;
   // Determines whether the special revealable item should render if the list
   // is empty
   final bool revealWhenEmpty;
+  // The size of our Revealable when it is fully expanded
+  final double revealableHeight;
   // Pass-thru to the eventual ListView.builder function
   final IndexedWidgetBuilder itemBuilder;
   // The function that builds your revealable top element
@@ -38,9 +40,10 @@ class PullToRevealTopItemList extends StatefulWidget {
 
   PullToRevealTopItemList({
     Key key,
-    this.itemsCount,
+    this.itemCount,
     this.revealWhenEmpty = true,
     @required this.topItemBuilder,
+    @required this.revealableHeight,
     @required this.itemBuilder,
     this.dividerBuilder,
   }) : super(key: key);
@@ -49,7 +52,7 @@ class PullToRevealTopItemList extends StatefulWidget {
 }
 
 class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with TickerProviderStateMixin {
-  bool isSearching = false;
+  bool isRevealed = false;
   bool isRemoving = false;
   bool _canAddSearch = true;
   bool _canRemoveSearch = true;
@@ -61,10 +64,11 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
   double lastEndScrollPosition = 0;
 
   double searchOpacity = 0;
-  double scrollToReveal = 50;
+  double scrollToReveal;
 
   @override
   void initState() {
+    scrollToReveal = widget.revealableHeight;
     _scrollController = ScrollController();
     super.initState();
   }
@@ -85,14 +89,14 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
       setState(() {
         isRemoving = true;
         if (pix >= scrollToReveal) {
-          isSearching = false;
+          isRevealed = false;
           if (_canRemoveSearch) {
             searchOpacity = 0;
             // Removes searchItem, so let's not let it come back until the next scroll
             _canAddSearch = false;
           }
         } else {
-          if (isSearching) {
+          if (isRevealed) {
             searchOpacity = ((scrollToReveal - pix) / scrollToReveal).clamp(0.0, 1.0);
           }
         }
@@ -106,7 +110,7 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
           // Adds searchItem, so let's not let it go away until the next scroll
           if (_canAddSearch) {
             _canRemoveSearch = false;
-            isSearching = true;
+            isRevealed = true;
           }
         } else {
           searchOpacity = (pix.abs() / scrollToReveal).clamp(0.0, 1.0);
@@ -120,32 +124,39 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
     // Set value to zero if below zero
     lastEndScrollPosition = lastEndScrollPosition > 0 ? lastEndScrollPosition : 0;
 
+    // When we're scrolled down into overflowing content, scrolling up part of the distance of the Revealable
+    // partially hides it, then freezes. This catches that state and completes closing the Revealable
     bool userIsDragging = (notification.dragDetails?.primaryVelocity ?? 0.0) > 0.0;
-    if (_canRemoveSearch && !userIsDragging) {
-      int runTime = 150 * searchOpacity.round();
-      double _startingOpacity = searchOpacity;
-      _closeController = AnimationController(duration: Duration(milliseconds: runTime), vsync: this);
-      _closeAnimation = Tween<double>(begin: 1.0, end: 0).animate(_closeController)
-        ..addListener(() {
-          setState(() {
-            searchOpacity = _closeAnimation.value * _startingOpacity;
-          });
-        })
-        ..addStatusListener((state) {
-          if (state == AnimationStatus.completed) {
-            isSearching = false;
-          }
-        });
-      _closeController.forward();
+    bool isOverflowing = notification.metrics.extentBefore > 0 || notification.metrics.extentAfter > 0;
+    if (isOverflowing && isRevealed && _canRemoveSearch && !userIsDragging) {
+      _scrollClosed();
     }
     _canAddSearch = true;
     _canRemoveSearch = true;
   }
 
+  void _scrollClosed() {
+    int runTime = 150 * searchOpacity.round();
+    double _startingOpacity = searchOpacity;
+    _closeController = AnimationController(duration: Duration(milliseconds: runTime), vsync: this);
+    _closeAnimation = Tween<double>(begin: 1.0, end: 0).animate(_closeController)
+      ..addListener(() {
+        setState(() {
+          searchOpacity = _closeAnimation.value * _startingOpacity;
+        });
+      })
+      ..addStatusListener((state) {
+        if (state == AnimationStatus.completed) {
+          isRevealed = false;
+        }
+      });
+    _closeController.forward();
+  }
+
   void _opener() {
     _abortCloseAnimation();
     setState(() {
-      isSearching = true;
+      isRevealed = true;
       isRemoving = false;
     });
   }
@@ -153,24 +164,22 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
   void _closer() {
     _abortCloseAnimation();
     setState(() {
-      isSearching = false;
+      isRevealed = false;
       isRemoving = false;
       searchOpacity = 0;
     });
   }
 
   void _abortCloseAnimation() {
-    // TODO: Needs better way to know if `_closeController` is still viable
-    // and in need of being disposed
-    if (_closeController.toString() != null) {
+    if (_closeController != null) {
       _closeController.stop();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    bool isEmptyAndForceOnEmpty = widget.itemsCount == 0 && widget.revealWhenEmpty;
-    double opacity = (isEmptyAndForceOnEmpty || (isSearching && !isRemoving)) ? 1.0 : searchOpacity;
+    bool isEmptyAndForceOnEmpty = widget.itemCount == 0 && widget.revealWhenEmpty;
+    double opacity = (isEmptyAndForceOnEmpty || (isRevealed && !isRemoving)) ? 1.0 : searchOpacity;
     return Column(
       children: <Widget>[
         Revealable(
@@ -195,7 +204,7 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
               // iOS-style physics for everyone, since Android by default
               // doesn't allow scrolling higher than the highest content
               physics: AlwaysBouncableScrollPhysics(),
-              itemCount: widget.itemsCount,
+              itemCount: widget.itemCount,
               itemBuilder: widget.itemBuilder,
             ),
           ),
