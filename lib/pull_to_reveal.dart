@@ -33,6 +33,8 @@ class PullToRevealTopItemList extends StatefulWidget {
   final IndexedWidgetBuilder itemBuilder;
   // The function that builds your revealable top element
   final RevealableBuilder topItemBuilder;
+  // Optional builder that places content between the Revealable and the List
+  final WidgetBuilder dividerBuilder;
 
   PullToRevealTopItemList({
     Key key,
@@ -40,6 +42,7 @@ class PullToRevealTopItemList extends StatefulWidget {
     this.revealWhenEmpty = true,
     @required this.topItemBuilder,
     @required this.itemBuilder,
+    this.dividerBuilder,
   }) : super(key: key);
 
   State createState() => PullToRevealTopItemListState();
@@ -177,6 +180,7 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
           opener: _opener,
           closer: _closer,
         ),
+        widget.dividerBuilder != null ? widget.dividerBuilder(context) : Container(),
         Expanded(
           child: NotificationListener<ScrollNotification>(
             onNotification: (scrollNotification) {
