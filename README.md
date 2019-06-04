@@ -22,11 +22,12 @@ class MyApp extends StatelessWidget {
       ),
       body: Center(
         child: PullToRevealTopItemList(
-          itemsCount: _counter,
+          itemCount: _counter,
           itemBuilder: (BuildContext context, int index) {
             return ListItemElement(index: index);
           },
-          topItemBuilder: (BuildContext context, Function opener, Function closer) {
+          revealableHeight: 50,
+          revealableBuilder: (BuildContext context, Function opener, Function closer, BoxConstraints constraints) {
             return Row(
               children: <Widget>[
                 SizedBox(width: 10),

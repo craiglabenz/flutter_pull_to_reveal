@@ -86,7 +86,7 @@ class _MyHomePageState extends State<MyHomePage> {
               child: Text('Items', style: Theme.of(context).textTheme.headline),
             );
           },
-          topItemBuilder: (BuildContext context, Function opener, Function closer) {
+          revealableBuilder: (BuildContext context, Function opener, Function closer, BoxConstraints constraints) {
             return Row(
               key: Key('scrollable-row'),
               children: <Widget>[

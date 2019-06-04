@@ -1,3 +1,5 @@
+import 'dart:math';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/material.dart';
 
 /// Combination of [BouncingScrollPhysics] and [AlwaysScrollableScrollPhysics] which creates
@@ -17,9 +19,9 @@ class AlwaysBouncableScrollPhysics extends BouncingScrollPhysics {
 }
 
 typedef RevealableToggler = void Function();
-typedef RevealableBuilder = Widget Function(BuildContext, RevealableToggler, RevealableToggler);
+typedef RevealableBuilder = Widget Function(BuildContext, RevealableToggler, RevealableToggler, BoxConstraints);
 
-Widget emptyTopBuilder(BuildContext context, RevealableToggler opener, RevealableToggler closer) {
+Widget emptyTopBuilder(BuildContext context, RevealableToggler opener, RevealableToggler closer, BoxConstraints constraints) {
   return Container();
 }
 
@@ -29,12 +31,14 @@ class PullToRevealTopItemList extends StatefulWidget {
   // Determines whether the special revealable item should render if the list
   // is empty
   final bool revealWhenEmpty;
+  // If true, the initial render will show the revealable
+  final bool startRevealed;
   // The size of our Revealable when it is fully expanded
   final double revealableHeight;
   // Pass-thru to the eventual ListView.builder function
   final IndexedWidgetBuilder itemBuilder;
   // The function that builds your revealable top element
-  final RevealableBuilder topItemBuilder;
+  final RevealableBuilder revealableBuilder;
   // Optional builder that places content between the Revealable and the List
   final WidgetBuilder dividerBuilder;
 
@@ -42,7 +46,8 @@ class PullToRevealTopItemList extends StatefulWidget {
     Key key,
     this.itemCount,
     this.revealWhenEmpty = true,
-    @required this.topItemBuilder,
+    this.startRevealed = false,
+    @required this.revealableBuilder,
     @required this.revealableHeight,
     @required this.itemBuilder,
     this.dividerBuilder,
@@ -52,24 +57,28 @@ class PullToRevealTopItemList extends StatefulWidget {
 }
 
 class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with TickerProviderStateMixin {
-  bool isRevealed = false;
+  bool isRevealed;
   bool isRemoving = false;
   bool _canAddSearch = true;
   bool _canRemoveSearch = true;
+  ScrollDirection scrollDirection = ScrollDirection.idle;
 
   AnimationController _closeController;
   Animation<double> _closeAnimation;
 
   ScrollController _scrollController;
-  double lastEndScrollPosition = 0;
+  double lastEndScrollPosition;
 
-  double searchOpacity = 0;
+  double searchOpacity;
   double scrollToReveal;
 
   @override
   void initState() {
-    scrollToReveal = widget.revealableHeight;
     _scrollController = ScrollController();
+    scrollToReveal = widget.revealableHeight;
+    searchOpacity = widget.startRevealed ? 1 : 0;
+    lastEndScrollPosition = 0;
+    isRevealed = widget.startRevealed;
     super.initState();
   }
 
@@ -113,7 +122,8 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
             isRevealed = true;
           }
         } else {
-          searchOpacity = (pix.abs() / scrollToReveal).clamp(0.0, 1.0);
+          double _searchOpacity = (pix.abs() / scrollToReveal).clamp(0.0, 1.0);
+          searchOpacity = max(_searchOpacity, searchOpacity);
         }
       });
     }
@@ -148,6 +158,8 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
       ..addStatusListener((state) {
         if (state == AnimationStatus.completed) {
           isRevealed = false;
+          isRemoving = false;
+          searchOpacity = 0;
         }
       });
     _closeController.forward();
@@ -162,18 +174,13 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
   }
 
   void _closer() {
+    isRemoving = true;
     _abortCloseAnimation();
-    setState(() {
-      isRevealed = false;
-      isRemoving = false;
-      searchOpacity = 0;
-    });
+    _scrollClosed();
   }
 
   void _abortCloseAnimation() {
-    if (_closeController != null) {
-      _closeController.stop();
-    }
+    _closeController?.stop();
   }
 
   @override
@@ -185,7 +192,7 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
         Revealable(
           opacity: opacity,
           maxHeight: scrollToReveal,
-          builder: opacity > 0.0 ? widget.topItemBuilder : emptyTopBuilder,
+          builder: opacity > 0.0 ? widget.revealableBuilder : emptyTopBuilder,
           opener: _opener,
           closer: _closer,
         ),
@@ -214,7 +221,7 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
   }
 }
 
-/// Helper widget which passes size constraints to the `topItemBuilder` defined above
+/// Helper widget which passes size constraints to the `revealableBuilder` defined above
 class Revealable extends StatelessWidget {
   final double opacity;
   final double maxHeight;
@@ -245,9 +252,8 @@ class Revealable extends StatelessWidget {
           child: Transform.scale(
             scale: opacity,
             child: Container(
-              height: scaledConstraints.maxHeight,
-              width: scaledConstraints.maxWidth,
-              child: builder(_context, opener, closer),
+              constraints: scaledConstraints,
+              child: builder(_context, opener, closer, scaledConstraints),
             ),
           ),
         );
