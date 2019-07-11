@@ -7,7 +7,7 @@ A simple Flutter widget that wraps a `ListView` and selectively renders a hidden
 To use the `PullToRevealListView` widget in your Flutter project, you need only wrap it in a `LayoutBuilder` and then a `Stack`. These are excellent for adding a little life to a `Scaffold` background, or for programming a Pong client.
 
 ```dart
-import 'package:corner_bouncer/corner_bouncer.dart';
+import 'package:pull_to_reveal/pull_to_reveal.dart';
 import 'package:flutter/material.dart';
 
 void main() => runApp(MyApp());
