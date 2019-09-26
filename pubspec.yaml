@@ -1,6 +1,6 @@
 name: pull_to_reveal
 description: A simple Flutter widget that wraps a `ListView` and selectively renders a hidden top element based on user scroll behavior.
-version: 0.0.1-beta-5
+version: 0.0.1
 author: Craig Labenz <craig.labenz@gmail.com>
 homepage: https://github.com/craiglabenz/flutter_pull_to_reveal
 

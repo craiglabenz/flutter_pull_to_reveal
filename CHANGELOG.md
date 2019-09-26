@@ -18,3 +18,10 @@
 ## [0.0.1-beta-5] - 2019-06-04
 
 - Added `startedRevealed` option for better user search discoverability
+
+## [0.0.1] - 2019-09-26
+
+- Fixed inconsistent scrolling/snapping behavior
+- Added [RevealableCompleter] flag for animation control
+- Significantly refactored of internal logic
+- Standardized example to filter on substrings instead of integers

@@ -27,7 +27,7 @@ class MyApp extends StatelessWidget {
             return ListItemElement(index: index);
           },
           revealableHeight: 50,
-          revealableBuilder: (BuildContext context, Function opener, Function closer, BoxConstraints constraints) {
+          revealableBuilder: (BuildContext context, RevealableToggler opener, RevealableToggler closer, BoxConstraints constraints) {
             return Row(
               children: <Widget>[
                 SizedBox(width: 10),
