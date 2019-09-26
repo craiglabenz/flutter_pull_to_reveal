@@ -23,5 +23,5 @@
 
 - Fixed inconsistent scrolling/snapping behavior
 - Added [RevealableCompleter] flag for animation control
-- Significantly refactored of internal logic
+- Significantly refactored internal logic
 - Standardized example to filter on substrings instead of integers
