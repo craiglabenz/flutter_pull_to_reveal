@@ -2,11 +2,15 @@ import 'dart:math';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/material.dart';
 
+typedef ChildBuilder = ListView Function(
+    {ScrollController controller, ScrollPhysics physics});
+
 /// Combination of [BouncingScrollPhysics] and [AlwaysScrollableScrollPhysics]
 /// which creates the iOS-style bouncing scroll even on when the page is not
 /// completely full on Android devices.
 class AlwaysBouncableScrollPhysics extends BouncingScrollPhysics {
-  const AlwaysBouncableScrollPhysics({ScrollPhysics parent}) : super(parent: parent);
+  const AlwaysBouncableScrollPhysics({ScrollPhysics parent})
+      : super(parent: parent);
 
   @override
   AlwaysBouncableScrollPhysics applyTo(ScrollPhysics ancestor) {
@@ -45,9 +49,11 @@ enum ScrollSource {
 typedef RevealableToggler = void Function({RevealableCompleter completer});
 
 /// Builder function for a "revealable" widget based on user scrolling.
-typedef RevealableBuilder = Widget Function(BuildContext, RevealableToggler, RevealableToggler, BoxConstraints);
+typedef RevealableBuilder = Widget Function(
+    BuildContext, RevealableToggler, RevealableToggler, BoxConstraints);
 
-Widget emptyTopBuilder(BuildContext context, RevealableToggler opener, RevealableToggler closer, BoxConstraints constraints) {
+Widget emptyTopBuilder(BuildContext context, RevealableToggler opener,
+    RevealableToggler closer, BoxConstraints constraints) {
   return Container();
 }
 
@@ -71,6 +77,10 @@ class PullToRevealTopItemList extends StatefulWidget {
   /// Milliseconds to complete a full closed-to-open (or inverse) animation.
   final int animationRuntime;
 
+  /// Function to build a ListView as the child of this widget.
+  /// Either the [childBuilder] or the [itemBuilder] must be specified.
+  final ChildBuilder childBuilder;
+
   /// Pass-thru to the eventual ListView.builder function.
   final IndexedWidgetBuilder itemBuilder;
 
@@ -90,19 +100,25 @@ class PullToRevealTopItemList extends StatefulWidget {
     this.startRevealed = false,
     @required this.revealableBuilder,
     @required this.revealableHeight,
-    @required this.itemBuilder,
+    this.itemBuilder,
+    this.childBuilder,
     this.opacityThresholdToReveal = 0.5,
     this.animationRuntime = 300,
     this.revealableCompleter = RevealableCompleter.animate,
     this.dividerBuilder,
-  }) : super(key: key);
+  }) : super(key: key) {
+    if ((itemBuilder == null) && (childBuilder == null)) {
+      throw ArgumentError('must specify an itemBuilder or a childBuilder');
+    }
+  }
 
   State createState() => PullToRevealTopItemListState();
 }
 
 enum RevealableState { closed, closing, userScrolling, opening, open }
 
-class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with TickerProviderStateMixin {
+class PullToRevealTopItemListState extends State<PullToRevealTopItemList>
+    with TickerProviderStateMixin {
   RevealableState _revealableState;
   ScrollDirection _scrollDirection = ScrollDirection.idle;
 
@@ -128,7 +144,8 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
     _revealableHeight = widget.revealableHeight;
     _opacityThresholdToReveal = widget.opacityThresholdToReveal;
     _revealableOpacity = widget.startRevealed ? 1 : 0;
-    _revealableState = widget.startRevealed ? RevealableState.open : RevealableState.closed;
+    _revealableState =
+        widget.startRevealed ? RevealableState.open : RevealableState.closed;
     _animationRuntime = widget.animationRuntime;
     _revealableCompleter = widget.revealableCompleter;
     _lastEndScrollPosition = 0;
@@ -184,7 +201,8 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
       } else {
         // Still scrolling enough to completely add revealable
         setToUserScrolling();
-        double _tmpRevealableOpacity = (pix / _revealableHeight).clamp(0.0, 1.0);
+        double _tmpRevealableOpacity =
+            (pix / _revealableHeight).clamp(0.0, 1.0);
         _revealableOpacity = max(_tmpRevealableOpacity, _revealableOpacity);
       }
     });
@@ -205,7 +223,9 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
       } else {
         // Still removing the revealable
         setToUserScrolling();
-        _revealableOpacity = ((_revealableHeight - scrolledPixels) / _revealableHeight).clamp(0.0, 1.0);
+        _revealableOpacity =
+            ((_revealableHeight - scrolledPixels) / _revealableHeight)
+                .clamp(0.0, 1.0);
       }
     });
   }
@@ -251,27 +271,40 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
   /// abandoned scrolling that may need a partially rendered revealable to be
   /// ushered to one of the two complete stays (fully hidden or fully revealed).
   void _onUpdateScroll(ScrollUpdateNotification notification) {
-    double scrolledPixels = notification.metrics.pixels - _lastEndScrollPosition;
-    _scrollDirection = scrolledPixels > 0 ? ScrollDirection.forward : ScrollDirection.reverse;
-    ScrollSource scrollSource = notification.dragDetails != null ? ScrollSource.userAction : ScrollSource.automatedRebound;
-    if (scrollSource == ScrollSource.userAction && _scrollDirection == ScrollDirection.forward && (isOpen || isOpening)) {
+    double scrolledPixels =
+        notification.metrics.pixels - _lastEndScrollPosition;
+    _scrollDirection =
+        scrolledPixels > 0 ? ScrollDirection.forward : ScrollDirection.reverse;
+    ScrollSource scrollSource = notification.dragDetails != null
+        ? ScrollSource.userAction
+        : ScrollSource.automatedRebound;
+    if (scrollSource == ScrollSource.userAction &&
+        _scrollDirection == ScrollDirection.forward &&
+        (isOpen || isOpening)) {
       setToUserScrolling();
     }
-    if (scrollSource == ScrollSource.userAction && _scrollDirection == ScrollDirection.reverse && (isClosed || isClosing)) {
+    if (scrollSource == ScrollSource.userAction &&
+        _scrollDirection == ScrollDirection.reverse &&
+        (isClosed || isClosing)) {
       setToUserScrolling();
     }
     if (!isUserScrolling) {
       return;
     }
-    bool _isDragRelease = _lastDragDetails != null && notification.dragDetails == null;
+    bool _isDragRelease =
+        _lastDragDetails != null && notification.dragDetails == null;
     _lastDragDetails = notification.dragDetails;
     // Pushing content up (ScrollDirection.forward)
     if (scrolledPixels > 0) {
-      _isDragRelease ? _endedPushUp() : _continuePushingContentUp(scrolledPixels);
+      _isDragRelease
+          ? _endedPushUp()
+          : _continuePushingContentUp(scrolledPixels);
 
       // Pulling content down (ScrollDirection.reverse)
     } else if (scrolledPixels < 0) {
-      _isDragRelease ? _endedPullDown() : _continuePullingContentDown(scrolledPixels.abs());
+      _isDragRelease
+          ? _endedPullDown()
+          : _continuePullingContentDown(scrolledPixels.abs());
     }
   }
 
@@ -285,12 +318,17 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
   void _onEndScroll(ScrollEndNotification notification) async {
     _lastEndScrollPosition = notification.metrics.pixels;
     // Set value to zero if below zero
-    _lastEndScrollPosition = _lastEndScrollPosition > 0 ? _lastEndScrollPosition : 0;
+    _lastEndScrollPosition =
+        _lastEndScrollPosition > 0 ? _lastEndScrollPosition : 0;
 
     // Pushing content up and not already closing
-    if (_scrollDirection == ScrollDirection.forward && !isClosed && !isClosing) {
+    if (_scrollDirection == ScrollDirection.forward &&
+        !isClosed &&
+        !isClosing) {
       _closer();
-    } else if (_scrollDirection == ScrollDirection.reverse && !isOpen && !isOpening) {
+    } else if (_scrollDirection == ScrollDirection.reverse &&
+        !isOpen &&
+        !isOpening) {
       _concludeReveal();
     }
   }
@@ -306,11 +344,13 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
   void _animateOpen() {
     setToOpening();
     double _startingOpacity = _revealableOpacity;
-    _openController = AnimationController(duration: Duration(milliseconds: runtime), vsync: this);
+    _openController = AnimationController(
+        duration: Duration(milliseconds: runtime), vsync: this);
     _openAnimation = Tween<double>(begin: 0, end: 1).animate(_openController)
       ..addListener(() {
         setState(() {
-          _revealableOpacity = (_openAnimation.value + _startingOpacity).clamp(0.0, 1.0);
+          _revealableOpacity =
+              (_openAnimation.value + _startingOpacity).clamp(0.0, 1.0);
         });
       })
       ..addStatusListener((state) {
@@ -325,19 +365,21 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
   void _animateClosed() {
     setToClosing();
     double _startingOpacity = _revealableOpacity;
-    _closeController = AnimationController(duration: Duration(milliseconds: runtime), vsync: this);
-    _closeAnimation = Tween<double>(begin: 1.0, end: 0).animate(_closeController)
-      ..addListener(() {
-        setState(() {
-          _revealableOpacity = _closeAnimation.value * _startingOpacity;
-        });
-      })
-      ..addStatusListener((state) {
-        if (state == AnimationStatus.completed) {
-          setToClosed();
-          _revealableOpacity = 0;
-        }
-      });
+    _closeController = AnimationController(
+        duration: Duration(milliseconds: runtime), vsync: this);
+    _closeAnimation =
+        Tween<double>(begin: 1.0, end: 0).animate(_closeController)
+          ..addListener(() {
+            setState(() {
+              _revealableOpacity = _closeAnimation.value * _startingOpacity;
+            });
+          })
+          ..addStatusListener((state) {
+            if (state == AnimationStatus.completed) {
+              setToClosed();
+              _revealableOpacity = 0;
+            }
+          });
     _closeController.forward();
   }
 
@@ -387,8 +429,10 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
 
   @override
   Widget build(BuildContext context) {
-    bool isEmptyAndForceOnEmpty = widget.itemCount == 0 && widget.revealWhenEmpty;
-    double opacity = (isEmptyAndForceOnEmpty || isOpen) ? 1.0 : _revealableOpacity;
+    bool isEmptyAndForceOnEmpty =
+        widget.itemCount == 0 && widget.revealWhenEmpty;
+    double opacity =
+        (isEmptyAndForceOnEmpty || isOpen) ? 1.0 : _revealableOpacity;
     return Column(
       children: <Widget>[
         Revealable(
@@ -398,7 +442,9 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
           opener: _opener,
           closer: _closer,
         ),
-        widget.dividerBuilder != null ? widget.dividerBuilder(context) : Container(),
+        widget.dividerBuilder != null
+            ? widget.dividerBuilder(context)
+            : Container(),
         Expanded(
           child: NotificationListener<ScrollNotification>(
             onNotification: (scrollNotification) {
@@ -410,14 +456,19 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
               // This return value continues event propagation
               return null;
             },
-            child: ListView.builder(
-              controller: _scrollController,
-              // iOS-style physics for everyone, since Android by default
-              // doesn't allow scrolling higher than the highest content
-              physics: AlwaysBouncableScrollPhysics(),
-              itemCount: widget.itemCount,
-              itemBuilder: widget.itemBuilder,
-            ),
+            child: (widget.childBuilder != null)
+                ? widget.childBuilder(
+                    controller: _scrollController,
+                    physics: AlwaysBouncableScrollPhysics(),
+                  )
+                : ListView.builder(
+                    controller: _scrollController,
+                    // iOS-style physics for everyone, since Android by default
+                    // doesn't allow scrolling higher than the highest content
+                    physics: AlwaysBouncableScrollPhysics(),
+                    itemCount: widget.itemCount,
+                    itemBuilder: widget.itemBuilder,
+                  ),
           ),
         ),
       ],
