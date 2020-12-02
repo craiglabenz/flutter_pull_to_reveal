@@ -15,7 +15,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Pull to Reveal Demo',
-      home: MyHomePage(title: 'Pull to Reveal Demo', revealWhenEmpty: revealWhenEmpty),
+      home: MyHomePage(
+          title: 'Pull to Reveal Demo', revealWhenEmpty: revealWhenEmpty),
     );
   }
 }
@@ -24,7 +25,8 @@ class MyHomePage extends StatefulWidget {
   final String title;
   final bool revealWhenEmpty;
 
-  MyHomePage({Key key, this.revealWhenEmpty = true, this.title}) : super(key: key);
+  MyHomePage({Key key, this.revealWhenEmpty = true, this.title})
+      : super(key: key);
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -62,27 +64,33 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       body: Center(
-        child: PullToRevealTopItemList(
+        child: PullToRevealTopItemList.builder(
           revealWhenEmpty: widget.revealWhenEmpty,
-          itemCount: _counter,
           revealableHeight: 50,
-          itemBuilder: (BuildContext context, int index) {
-            if (_filter != null && !items[index].contains(_filter)) {
-              return Container();
-            }
-            return Card(
-              margin: EdgeInsets.all(10),
-              child: Center(
-                child: Container(
-                  height: 150,
-                  padding: EdgeInsets.all(10),
-                  child: Center(
-                    child: Text('${items[index]}', key: Key('$index'), style: TextStyle(fontSize: 20)),
+          builder: (context, scrollController) => ListView.builder(
+            controller: scrollController,
+            itemCount: _counter,
+            itemBuilder: (BuildContext context, int index) {
+              if (_filter != null && !items[index].contains(_filter)) {
+                return Container();
+              }
+              return Card(
+                margin: EdgeInsets.all(10),
+                child: Center(
+                  child: Container(
+                    height: 150,
+                    padding: EdgeInsets.all(10),
+                    child: Center(
+                      child: Text('${items[index]}',
+                          key: Key('$index'), style: TextStyle(fontSize: 20)),
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            physics: AlwaysScrollableScrollPhysics(),
+          ),
           dividerBuilder: (BuildContext context) {
             return Container(
               alignment: Alignment.topLeft,
@@ -90,7 +98,8 @@ class _MyHomePageState extends State<MyHomePage> {
               child: Text('Items', style: Theme.of(context).textTheme.headline),
             );
           },
-          revealableBuilder: (BuildContext context, RevealableToggler opener, RevealableToggler closer, BoxConstraints constraints) {
+          revealableBuilder: (BuildContext context, RevealableToggler opener,
+              RevealableToggler closer, BoxConstraints constraints) {
             return Row(
               key: Key('scrollable-row'),
               children: <Widget>[
@@ -100,7 +109,8 @@ class _MyHomePageState extends State<MyHomePage> {
                     controller: searchController,
                     decoration: InputDecoration(
                       hintText: 'Search',
-                      suffixIcon: Icon(Icons.search, color: Theme.of(context).backgroundColor),
+                      suffixIcon: Icon(Icons.search,
+                          color: Theme.of(context).backgroundColor),
                     ),
                   ),
                 ),

@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 /// which creates the iOS-style bouncing scroll even on when the page is not
 /// completely full on Android devices.
 class AlwaysBouncableScrollPhysics extends BouncingScrollPhysics {
-  const AlwaysBouncableScrollPhysics({ScrollPhysics parent}) : super(parent: parent);
+  const AlwaysBouncableScrollPhysics({ScrollPhysics parent})
+      : super(parent: parent);
 
   @override
   AlwaysBouncableScrollPhysics applyTo(ScrollPhysics ancestor) {
@@ -45,13 +46,21 @@ enum ScrollSource {
 typedef RevealableToggler = void Function({RevealableCompleter completer});
 
 /// Builder function for a "revealable" widget based on user scrolling.
-typedef RevealableBuilder = Widget Function(BuildContext, RevealableToggler, RevealableToggler, BoxConstraints);
+typedef RevealableBuilder = Widget Function(
+    BuildContext, RevealableToggler, RevealableToggler, BoxConstraints);
 
-Widget emptyTopBuilder(BuildContext context, RevealableToggler opener, RevealableToggler closer, BoxConstraints constraints) {
+Widget emptyTopBuilder(BuildContext context, RevealableToggler opener,
+    RevealableToggler closer, BoxConstraints constraints) {
   return Container();
 }
 
 class PullToRevealTopItemList extends StatefulWidget {
+  /// Optional decoration for a Container that wraps the entire revealed widget.
+  ///
+  /// This Container is not scaled with the animation, making this
+  /// [BoxDecoration] suitable for background styling.
+  final BoxDecoration backgroundRevealableDecoration;
+
   /// Pass-thru to the eventual ListView for size-of-content optimizations.
   final int itemCount;
 
@@ -74,6 +83,10 @@ class PullToRevealTopItemList extends StatefulWidget {
   /// Pass-thru to the eventual ListView.builder function.
   final IndexedWidgetBuilder itemBuilder;
 
+  /// Pass-thru for a single builder that constructs the entire list. Use this
+  /// for access to specific ListView build parameters.
+  final Widget Function(BuildContext, ScrollController) builder;
+
   /// The function that builds your revealable top element.
   final RevealableBuilder revealableBuilder;
 
@@ -83,26 +96,115 @@ class PullToRevealTopItemList extends StatefulWidget {
   /// Optional builder that places content between the Revealable and the List.
   final WidgetBuilder dividerBuilder;
 
-  PullToRevealTopItemList({
-    Key key,
-    this.itemCount,
-    this.revealWhenEmpty = true,
-    this.startRevealed = false,
+  /// Optional indicator for whether the list should dismiss a visible keyboard.
+  final ScrollViewKeyboardDismissBehavior keyboardDismissBehavior;
+
+  PullToRevealTopItemList._({
     @required this.revealableBuilder,
     @required this.revealableHeight,
     @required this.itemBuilder,
-    this.opacityThresholdToReveal = 0.5,
+    @required this.builder,
+    @required this.backgroundRevealableDecoration,
     this.animationRuntime = 300,
-    this.revealableCompleter = RevealableCompleter.animate,
     this.dividerBuilder,
+    this.itemCount,
+    this.keyboardDismissBehavior,
+    this.opacityThresholdToReveal = 0.5,
+    this.revealableCompleter = RevealableCompleter.animate,
+    this.revealWhenEmpty = true,
+    this.startRevealed = false,
+    Key key,
   }) : super(key: key);
 
-  State createState() => PullToRevealTopItemListState();
+  /// Builder constructor to expose complete control over the inner [ListView].
+  ///
+  /// The builder function accepts two parameters: 1) the current [BuildContext],
+  /// and 2) the [ScrollController] that drives the revealable builder. If you
+  /// use this constructor, you must apply the [ScrollController] to your
+  /// [ListView], like so:
+  ///
+  /// ```dart
+  /// builder: (context, scrollController) => ListView.builder(
+  ///   controller: scrollController,
+  ///   itemCount: yourItemCount,
+  ///   itemBuilder: yourItemBuilder,
+  ///
+  ///   // It is recommended to apply this for intended behavior in both iOS
+  ///   // and Android
+  ///   physics: AlwaysBouncableScrollPhysics(),
+  /// )
+  /// ```
+  factory PullToRevealTopItemList.builder({
+    @required RevealableBuilder revealableBuilder,
+    @required double revealableHeight,
+    @required Widget Function(BuildContext, ScrollController) builder,
+    BoxDecoration backgroundRevealableDecoration,
+    int animationRuntime = 300,
+    WidgetBuilder dividerBuilder,
+    ScrollViewKeyboardDismissBehavior keyboardDismissBehavior,
+    double opacityThresholdToReveal = 0.5,
+    RevealableCompleter revealableCompleter = RevealableCompleter.animate,
+    bool revealWhenEmpty = true,
+    bool startRevealed = false,
+    Key key,
+  }) =>
+      PullToRevealTopItemList._(
+        revealableBuilder: revealableBuilder,
+        revealableHeight: revealableHeight,
+        itemBuilder: null,
+        builder: builder,
+        animationRuntime: animationRuntime,
+        backgroundRevealableDecoration: backgroundRevealableDecoration,
+        dividerBuilder: dividerBuilder,
+        itemCount: null,
+        keyboardDismissBehavior: keyboardDismissBehavior,
+        opacityThresholdToReveal: opacityThresholdToReveal,
+        revealableCompleter: revealableCompleter,
+        revealWhenEmpty: revealWhenEmpty,
+        startRevealed: startRevealed,
+      );
+
+  factory PullToRevealTopItemList({
+    @required RevealableBuilder revealableBuilder,
+    @required double revealableHeight,
+    @required IndexedWidgetBuilder itemBuilder,
+    int animationRuntime = 300,
+    BoxDecoration backgroundRevealableDecoration,
+    WidgetBuilder dividerBuilder,
+    int itemCount,
+    ScrollViewKeyboardDismissBehavior keyboardDismissBehavior,
+    double opacityThresholdToReveal = 0.5,
+    RevealableCompleter revealableCompleter = RevealableCompleter.animate,
+    bool revealWhenEmpty = true,
+    bool startRevealed = false,
+    Key key,
+  }) =>
+      PullToRevealTopItemList._(
+        revealableBuilder: revealableBuilder,
+        revealableHeight: revealableHeight,
+        itemBuilder: itemBuilder,
+        builder: null,
+        animationRuntime: animationRuntime,
+        backgroundRevealableDecoration: backgroundRevealableDecoration,
+        dividerBuilder: dividerBuilder,
+        itemCount: itemCount,
+        keyboardDismissBehavior: keyboardDismissBehavior,
+        opacityThresholdToReveal: opacityThresholdToReveal,
+        revealableCompleter: revealableCompleter,
+        revealWhenEmpty: revealWhenEmpty,
+        startRevealed: startRevealed,
+      );
+
+  State createState() => _PullToRevealTopItemListState();
 }
 
+/// Current state of the revealable.
 enum RevealableState { closed, closing, userScrolling, opening, open }
 
-class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with TickerProviderStateMixin {
+/// ListItem wrapper whose first item is hidden, but revealed when the user
+/// scrolls.
+class _PullToRevealTopItemListState extends State<PullToRevealTopItemList>
+    with TickerProviderStateMixin {
   RevealableState _revealableState;
   ScrollDirection _scrollDirection = ScrollDirection.idle;
 
@@ -128,7 +230,8 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
     _revealableHeight = widget.revealableHeight;
     _opacityThresholdToReveal = widget.opacityThresholdToReveal;
     _revealableOpacity = widget.startRevealed ? 1 : 0;
-    _revealableState = widget.startRevealed ? RevealableState.open : RevealableState.closed;
+    _revealableState =
+        widget.startRevealed ? RevealableState.open : RevealableState.closed;
     _animationRuntime = widget.animationRuntime;
     _revealableCompleter = widget.revealableCompleter;
     _lastEndScrollPosition = 0;
@@ -141,25 +244,15 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
   bool get isOpening => _revealableState == RevealableState.opening;
   bool get isOpen => _revealableState == RevealableState.open;
 
-  void setToClosed() {
-    _revealableState = RevealableState.closed;
-  }
+  void setToClosed() => _revealableState = RevealableState.closed;
 
-  void setToClosing() {
-    _revealableState = RevealableState.closing;
-  }
+  void setToClosing() => _revealableState = RevealableState.closing;
 
-  void setToUserScrolling() {
-    _revealableState = RevealableState.userScrolling;
-  }
+  void setToUserScrolling() => _revealableState = RevealableState.userScrolling;
 
-  void setToOpening() {
-    _revealableState = RevealableState.opening;
-  }
+  void setToOpening() => _revealableState = RevealableState.opening;
 
-  void setToOpen() {
-    _revealableState = RevealableState.open;
-  }
+  void setToOpen() => _revealableState = RevealableState.open;
 
   @override
   void dispose() {
@@ -184,7 +277,8 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
       } else {
         // Still scrolling enough to completely add revealable
         setToUserScrolling();
-        double _tmpRevealableOpacity = (pix / _revealableHeight).clamp(0.0, 1.0);
+        double _tmpRevealableOpacity =
+            (pix / _revealableHeight).clamp(0.0, 1.0);
         _revealableOpacity = max(_tmpRevealableOpacity, _revealableOpacity);
       }
     });
@@ -205,7 +299,9 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
       } else {
         // Still removing the revealable
         setToUserScrolling();
-        _revealableOpacity = ((_revealableHeight - scrolledPixels) / _revealableHeight).clamp(0.0, 1.0);
+        _revealableOpacity =
+            ((_revealableHeight - scrolledPixels) / _revealableHeight)
+                .clamp(0.0, 1.0);
       }
     });
   }
@@ -251,27 +347,40 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
   /// abandoned scrolling that may need a partially rendered revealable to be
   /// ushered to one of the two complete stays (fully hidden or fully revealed).
   void _onUpdateScroll(ScrollUpdateNotification notification) {
-    double scrolledPixels = notification.metrics.pixels - _lastEndScrollPosition;
-    _scrollDirection = scrolledPixels > 0 ? ScrollDirection.forward : ScrollDirection.reverse;
-    ScrollSource scrollSource = notification.dragDetails != null ? ScrollSource.userAction : ScrollSource.automatedRebound;
-    if (scrollSource == ScrollSource.userAction && _scrollDirection == ScrollDirection.forward && (isOpen || isOpening)) {
+    double scrolledPixels =
+        notification.metrics.pixels - _lastEndScrollPosition;
+    _scrollDirection =
+        scrolledPixels > 0 ? ScrollDirection.forward : ScrollDirection.reverse;
+    ScrollSource scrollSource = notification.dragDetails != null
+        ? ScrollSource.userAction
+        : ScrollSource.automatedRebound;
+    if (scrollSource == ScrollSource.userAction &&
+        _scrollDirection == ScrollDirection.forward &&
+        (isOpen || isOpening)) {
       setToUserScrolling();
     }
-    if (scrollSource == ScrollSource.userAction && _scrollDirection == ScrollDirection.reverse && (isClosed || isClosing)) {
+    if (scrollSource == ScrollSource.userAction &&
+        _scrollDirection == ScrollDirection.reverse &&
+        (isClosed || isClosing)) {
       setToUserScrolling();
     }
     if (!isUserScrolling) {
       return;
     }
-    bool _isDragRelease = _lastDragDetails != null && notification.dragDetails == null;
+    bool _isDragRelease =
+        _lastDragDetails != null && notification.dragDetails == null;
     _lastDragDetails = notification.dragDetails;
     // Pushing content up (ScrollDirection.forward)
     if (scrolledPixels > 0) {
-      _isDragRelease ? _endedPushUp() : _continuePushingContentUp(scrolledPixels);
+      _isDragRelease
+          ? _endedPushUp()
+          : _continuePushingContentUp(scrolledPixels);
 
       // Pulling content down (ScrollDirection.reverse)
     } else if (scrolledPixels < 0) {
-      _isDragRelease ? _endedPullDown() : _continuePullingContentDown(scrolledPixels.abs());
+      _isDragRelease
+          ? _endedPullDown()
+          : _continuePullingContentDown(scrolledPixels.abs());
     }
   }
 
@@ -285,12 +394,17 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
   void _onEndScroll(ScrollEndNotification notification) async {
     _lastEndScrollPosition = notification.metrics.pixels;
     // Set value to zero if below zero
-    _lastEndScrollPosition = _lastEndScrollPosition > 0 ? _lastEndScrollPosition : 0;
+    _lastEndScrollPosition =
+        _lastEndScrollPosition > 0 ? _lastEndScrollPosition : 0;
 
     // Pushing content up and not already closing
-    if (_scrollDirection == ScrollDirection.forward && !isClosed && !isClosing) {
+    if (_scrollDirection == ScrollDirection.forward &&
+        !isClosed &&
+        !isClosing) {
       _closer();
-    } else if (_scrollDirection == ScrollDirection.reverse && !isOpen && !isOpening) {
+    } else if (_scrollDirection == ScrollDirection.reverse &&
+        !isOpen &&
+        !isOpening) {
       _concludeReveal();
     }
   }
@@ -306,11 +420,13 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
   void _animateOpen() {
     setToOpening();
     double _startingOpacity = _revealableOpacity;
-    _openController = AnimationController(duration: Duration(milliseconds: runtime), vsync: this);
+    _openController = AnimationController(
+        duration: Duration(milliseconds: runtime), vsync: this);
     _openAnimation = Tween<double>(begin: 0, end: 1).animate(_openController)
       ..addListener(() {
         setState(() {
-          _revealableOpacity = (_openAnimation.value + _startingOpacity).clamp(0.0, 1.0);
+          _revealableOpacity =
+              (_openAnimation.value + _startingOpacity).clamp(0.0, 1.0);
         });
       })
       ..addStatusListener((state) {
@@ -325,23 +441,26 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
   void _animateClosed() {
     setToClosing();
     double _startingOpacity = _revealableOpacity;
-    _closeController = AnimationController(duration: Duration(milliseconds: runtime), vsync: this);
-    _closeAnimation = Tween<double>(begin: 1.0, end: 0).animate(_closeController)
-      ..addListener(() {
-        setState(() {
-          _revealableOpacity = _closeAnimation.value * _startingOpacity;
-        });
-      })
-      ..addStatusListener((state) {
-        if (state == AnimationStatus.completed) {
-          setToClosed();
-          _revealableOpacity = 0;
-        }
-      });
+    _closeController = AnimationController(
+        duration: Duration(milliseconds: runtime), vsync: this);
+    _closeAnimation =
+        Tween<double>(begin: 1.0, end: 0).animate(_closeController)
+          ..addListener(() {
+            setState(() {
+              _revealableOpacity = _closeAnimation.value * _startingOpacity;
+            });
+          })
+          ..addStatusListener((state) {
+            if (state == AnimationStatus.completed) {
+              setToClosed();
+              _revealableOpacity = 0;
+            }
+          });
     _closeController.forward();
   }
 
-  /// Leads to complete rendering of the "revealable" via the given [RevealableCompleter].
+  /// Leads to complete rendering of the "revealable" via the given
+  /// [RevealableCompleter].
   void _opener({RevealableCompleter completer}) {
     completer = completer ?? _revealableCompleter;
     _abortCloseAnimation();
@@ -352,7 +471,8 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
     }
   }
 
-  /// Leads to complete hiding of the "revealable" via the given [RevealableCompleter].
+  /// Leads to complete hiding of the "revealable" via the given
+  /// [RevealableCompleter].
   void _closer({RevealableCompleter completer}) {
     completer = completer ?? _revealableCompleter;
     _abortOpenAnimation();
@@ -363,13 +483,8 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
     }
   }
 
-  void _abortCloseAnimation() {
-    _closeController?.stop();
-  }
-
-  void _abortOpenAnimation() {
-    _openController?.stop();
-  }
+  void _abortCloseAnimation() => _closeController?.stop();
+  void _abortOpenAnimation() => _openController?.stop();
 
   void _snapOpen() {
     setToOpen();
@@ -387,18 +502,23 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
 
   @override
   Widget build(BuildContext context) {
-    bool isEmptyAndForceOnEmpty = widget.itemCount == 0 && widget.revealWhenEmpty;
-    double opacity = (isEmptyAndForceOnEmpty || isOpen) ? 1.0 : _revealableOpacity;
+    bool isEmptyAndForceOnEmpty =
+        widget.itemCount == 0 && widget.revealWhenEmpty;
+    double opacity =
+        (isEmptyAndForceOnEmpty || isOpen) ? 1.0 : _revealableOpacity;
     return Column(
       children: <Widget>[
-        Revealable(
+        _Revealable(
+          backgroundBoxDecoration: widget.backgroundRevealableDecoration,
           opacity: opacity,
           maxHeight: _revealableHeight,
           builder: opacity > 0.0 ? widget.revealableBuilder : emptyTopBuilder,
           opener: _opener,
           closer: _closer,
         ),
-        widget.dividerBuilder != null ? widget.dividerBuilder(context) : Container(),
+        widget.dividerBuilder != null
+            ? widget.dividerBuilder(context)
+            : Container(),
         Expanded(
           child: NotificationListener<ScrollNotification>(
             onNotification: (scrollNotification) {
@@ -410,14 +530,17 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
               // This return value continues event propagation
               return null;
             },
-            child: ListView.builder(
-              controller: _scrollController,
-              // iOS-style physics for everyone, since Android by default
-              // doesn't allow scrolling higher than the highest content
-              physics: AlwaysBouncableScrollPhysics(),
-              itemCount: widget.itemCount,
-              itemBuilder: widget.itemBuilder,
-            ),
+            child: widget.builder == null
+                ? ListView.builder(
+                    controller: _scrollController,
+                    // iOS-style physics for everyone, since Android by default
+                    // doesn't allow scrolling higher than the highest content
+                    physics: AlwaysBouncableScrollPhysics(),
+                    keyboardDismissBehavior: widget.keyboardDismissBehavior,
+                    itemCount: widget.itemCount,
+                    itemBuilder: widget.itemBuilder,
+                  )
+                : widget.builder(context, _scrollController),
           ),
         ),
       ],
@@ -425,19 +548,34 @@ class PullToRevealTopItemListState extends State<PullToRevealTopItemList> with T
   }
 }
 
-/// Helper widget which passes size constraints to the [RevealableBuilder] defined above.
-class Revealable extends StatelessWidget {
-  final double opacity;
-  final double maxHeight;
+/// Helper widget which passes size constraints to the
+/// [RevealableBuilder].
+class _Revealable extends StatelessWidget {
+  /// Optional decoration for a Container that wraps the entire revealed widget.
+  final BoxDecoration backgroundBoxDecoration;
+
+  /// Builder for your list's top item, which is conditionally rendered
+  /// depending on user scroll behavior.
   final RevealableBuilder builder;
-  final RevealableToggler opener;
+
+  /// Callback to force the revealed widget to disappear.
   final RevealableToggler closer;
-  Revealable({
-    @required this.opacity,
-    @required this.maxHeight,
+
+  /// Maximum height of the revealed widget once fully rendered.
+  final double maxHeight;
+
+  /// Current transparency of the revealed widget.
+  final double opacity;
+
+  /// Callback to force the revealed widget to appear.
+  final RevealableToggler opener;
+  _Revealable({
     @required this.builder,
-    @required this.opener,
     @required this.closer,
+    @required this.maxHeight,
+    @required this.opacity,
+    @required this.opener,
+    this.backgroundBoxDecoration,
   });
 
   @override
@@ -451,13 +589,16 @@ class Revealable extends StatelessWidget {
           minHeight: 0,
           minWidth: 0,
         );
-        return Opacity(
-          opacity: opacity,
-          child: Transform.scale(
-            scale: opacity,
-            child: Container(
-              constraints: scaledConstraints,
-              child: builder(_context, opener, closer, scaledConstraints),
+        return Container(
+          decoration: backgroundBoxDecoration,
+          child: Opacity(
+            opacity: opacity,
+            child: Transform.scale(
+              scale: opacity,
+              child: Container(
+                constraints: scaledConstraints,
+                child: builder(_context, opener, closer, scaledConstraints),
+              ),
             ),
           ),
         );

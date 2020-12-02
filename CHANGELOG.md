@@ -25,3 +25,10 @@
 - Added [RevealableCompleter] flag for animation control
 - Significantly refactored internal logic
 - Standardized example to filter on substrings instead of integers
+
+## [0.0.2] - 2020-12-02
+
+- Added `BoxDecoration` parameter for background of Revealable
+- Added new `.builder()` constructor to fully expose the composition of the underlying `ListView`
+- Directly exposed `ScrollViewKeyboardDismissBehavior` parameter from `ListView`
+- Additional comments and code formatting
