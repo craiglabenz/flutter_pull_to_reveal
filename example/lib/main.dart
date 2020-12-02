@@ -95,7 +95,10 @@ class _MyHomePageState extends State<MyHomePage> {
             return Container(
               alignment: Alignment.topLeft,
               padding: EdgeInsets.all(10),
-              child: Text('Items', style: Theme.of(context).textTheme.headline),
+              child: Text(
+                'Items',
+                style: Theme.of(context).textTheme.headline5,
+              ),
             );
           },
           revealableBuilder: (BuildContext context, RevealableToggler opener,
