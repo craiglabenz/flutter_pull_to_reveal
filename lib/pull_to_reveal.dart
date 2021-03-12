@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 
 /// Combination of [BouncingScrollPhysics] and [AlwaysScrollableScrollPhysics]
 /// which creates the iOS-style bouncing scroll even on when the page is not
@@ -99,6 +100,14 @@ class PullToRevealTopItemList extends StatefulWidget {
   /// Optional indicator for whether the list should dismiss a visible keyboard.
   final ScrollViewKeyboardDismissBehavior keyboardDismissBehavior;
 
+  /// Optional override to freeze revealable on scroll up if the keyboard is
+  /// visible.
+  ///
+  /// If the revealable contains a text input with focus, scrolling up will
+  /// eventually remove that widget, causing Flutter to dismiss the keyboard.
+  /// Set this value to `true` to disable the above effect.
+  final bool freezeOnScrollUpIfKeyboardIsVisible;
+
   PullToRevealTopItemList._({
     @required this.revealableBuilder,
     @required this.revealableHeight,
@@ -113,6 +122,7 @@ class PullToRevealTopItemList extends StatefulWidget {
     this.revealableCompleter = RevealableCompleter.animate,
     this.revealWhenEmpty = true,
     this.startRevealed = false,
+    this.freezeOnScrollUpIfKeyboardIsVisible = false,
     Key key,
   }) : super(key: key);
 
@@ -141,6 +151,7 @@ class PullToRevealTopItemList extends StatefulWidget {
     BoxDecoration backgroundRevealableDecoration,
     int animationRuntime = 300,
     WidgetBuilder dividerBuilder,
+    bool freezeOnScrollUpIfKeyboardIsVisible = false,
     ScrollViewKeyboardDismissBehavior keyboardDismissBehavior,
     double opacityThresholdToReveal = 0.5,
     RevealableCompleter revealableCompleter = RevealableCompleter.animate,
@@ -156,6 +167,8 @@ class PullToRevealTopItemList extends StatefulWidget {
         animationRuntime: animationRuntime,
         backgroundRevealableDecoration: backgroundRevealableDecoration,
         dividerBuilder: dividerBuilder,
+        freezeOnScrollUpIfKeyboardIsVisible:
+            freezeOnScrollUpIfKeyboardIsVisible,
         itemCount: null,
         keyboardDismissBehavior: keyboardDismissBehavior,
         opacityThresholdToReveal: opacityThresholdToReveal,
@@ -171,6 +184,7 @@ class PullToRevealTopItemList extends StatefulWidget {
     int animationRuntime = 300,
     BoxDecoration backgroundRevealableDecoration,
     WidgetBuilder dividerBuilder,
+    bool freezeOnScrollUpIfKeyboardIsVisible = false,
     int itemCount,
     ScrollViewKeyboardDismissBehavior keyboardDismissBehavior,
     double opacityThresholdToReveal = 0.5,
@@ -187,6 +201,8 @@ class PullToRevealTopItemList extends StatefulWidget {
         animationRuntime: animationRuntime,
         backgroundRevealableDecoration: backgroundRevealableDecoration,
         dividerBuilder: dividerBuilder,
+        freezeOnScrollUpIfKeyboardIsVisible:
+            freezeOnScrollUpIfKeyboardIsVisible,
         itemCount: itemCount,
         keyboardDismissBehavior: keyboardDismissBehavior,
         opacityThresholdToReveal: opacityThresholdToReveal,
@@ -207,6 +223,7 @@ class _PullToRevealTopItemListState extends State<PullToRevealTopItemList>
     with TickerProviderStateMixin {
   RevealableState _revealableState;
   ScrollDirection _scrollDirection = ScrollDirection.idle;
+  bool _isKeyboardVisible = false;
 
   AnimationController _closeController;
   Animation<double> _closeAnimation;
@@ -235,9 +252,17 @@ class _PullToRevealTopItemListState extends State<PullToRevealTopItemList>
     _animationRuntime = widget.animationRuntime;
     _revealableCompleter = widget.revealableCompleter;
     _lastEndScrollPosition = 0;
+    KeyboardVisibilityController()
+      ..onChange.listen((isVisible) {
+        _isKeyboardVisible = isVisible;
+      });
     super.initState();
   }
 
+  /// Helper for whether the animation to minimize the revealable on scroll-up
+  /// should be frozen to preserve keyboard visibility.
+  bool get isFrozen =>
+      _isKeyboardVisible && widget.freezeOnScrollUpIfKeyboardIsVisible;
   bool get isClosed => _revealableState == RevealableState.closed;
   bool get isClosing => _revealableState == RevealableState.closing;
   bool get isUserScrolling => _revealableState == RevealableState.userScrolling;
@@ -286,7 +311,7 @@ class _PullToRevealTopItemListState extends State<PullToRevealTopItemList>
 
   /// Handles updates while a user is actively pushing content up.
   void _continuePushingContentUp(double scrolledPixels) {
-    if (isClosed) {
+    if (isClosed || isFrozen) {
       // Important guard to prevent revealing a hidden revealable
       // when the user starts pulling content down
       return;
@@ -335,7 +360,7 @@ class _PullToRevealTopItemListState extends State<PullToRevealTopItemList>
 
   /// Handles final considerations after a user stops scrolling content up.
   void _endedPushUp() {
-    if (isClosed || isClosing) {
+    if (isClosed || isClosing || isFrozen) {
       return;
     }
     _concludeReveal();
@@ -400,7 +425,8 @@ class _PullToRevealTopItemListState extends State<PullToRevealTopItemList>
     // Pushing content up and not already closing
     if (_scrollDirection == ScrollDirection.forward &&
         !isClosed &&
-        !isClosing) {
+        !isClosing &&
+        !isFrozen) {
       _closer();
     } else if (_scrollDirection == ScrollDirection.reverse &&
         !isOpen &&

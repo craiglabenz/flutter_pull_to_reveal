@@ -88,7 +88,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               );
             },
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.manual,
             physics: AlwaysScrollableScrollPhysics(),
           ),
           dividerBuilder: (BuildContext context) {
@@ -101,6 +101,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             );
           },
+          freezeOnScrollUpIfKeyboardIsVisible: true,
           revealableBuilder: (BuildContext context, RevealableToggler opener,
               RevealableToggler closer, BoxConstraints constraints) {
             return Row(
