@@ -66,6 +66,9 @@ class PullToRevealTopItemList extends StatefulWidget {
   final int itemCount;
 
   /// The revealable's render state if the list is empty.
+  ///
+  /// Note: This is incompatible with the `builder()` constructor, because
+  /// that pattern is not tied to the concept of an itemCount.
   final bool revealWhenEmpty;
 
   /// The revealable's initial render state.
@@ -124,7 +127,8 @@ class PullToRevealTopItemList extends StatefulWidget {
     this.startRevealed = false,
     this.freezeOnScrollUpIfKeyboardIsVisible = false,
     Key key,
-  }) : super(key: key);
+  })  : assert(itemCount != null),
+        super(key: key);
 
   /// Builder constructor to expose complete control over the inner [ListView].
   ///
