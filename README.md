@@ -4,7 +4,10 @@ A simple Flutter widget that wraps a `ListView` and selectively renders a hidden
 
 ## Getting Started
 
-To use the `PullToRevealListView` widget in your Flutter project, you need only wrap it in a `LayoutBuilder` and then a `Stack`. These are excellent for adding a little life to a `Scaffold` background, or for programming a Pong client.
+To use the `PullToRevealTopItemList` widget in your Flutter project, wrap any of
+your `ListView`s with this extra widget. You can either use the
+`PullToRevealTopItemList.builder()` pattern to control the entire inner list, or
+use the familiar `itemCount` and `itemBuilder(context, index)` pattern.
 
 ```dart
 import 'package:pull_to_reveal/pull_to_reveal.dart';
@@ -22,6 +25,10 @@ class MyApp extends StatelessWidget {
       ),
       body: Center(
         child: PullToRevealTopItemList(
+          // Set this to `true` to avoid losing a TextInput in your revealable
+          // during scroll up, and in doing so, also causing Flutter to dismiss
+          // any visible keyboards.
+          freezeOnScrollUpIfKeyboardIsVisible: true,
           itemCount: _counter,
           itemBuilder: (BuildContext context, int index) {
             return ListItemElement(index: index);

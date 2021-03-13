@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pull_to_reveal/pull_to_reveal.dart';
 
-Widget getTestApp({int itemCount = 0, bool revealWhenEmpty}) => MaterialApp(
+Widget getTestApp({int itemCount = 0, required bool revealWhenEmpty}) =>
+    MaterialApp(
       home: Scaffold(
         body: Center(
           child: PullToRevealTopItemList(

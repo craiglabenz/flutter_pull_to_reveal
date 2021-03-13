@@ -34,12 +34,11 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
-  String _filter;
+  String _filter = '';
   List<String> items = [];
-  TextEditingController searchController;
+  TextEditingController searchController = TextEditingController();
 
   void initState() {
-    searchController = TextEditingController();
     searchController.addListener(_onSearch);
     super.initState();
   }

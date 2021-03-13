@@ -7,11 +7,11 @@ import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 /// which creates the iOS-style bouncing scroll even on when the page is not
 /// completely full on Android devices.
 class AlwaysBouncableScrollPhysics extends BouncingScrollPhysics {
-  const AlwaysBouncableScrollPhysics({ScrollPhysics parent})
+  const AlwaysBouncableScrollPhysics({ScrollPhysics? parent})
       : super(parent: parent);
 
   @override
-  AlwaysBouncableScrollPhysics applyTo(ScrollPhysics ancestor) {
+  AlwaysBouncableScrollPhysics applyTo(ScrollPhysics? ancestor) {
     return AlwaysBouncableScrollPhysics(parent: buildParent(ancestor));
   }
 
@@ -60,10 +60,10 @@ class PullToRevealTopItemList extends StatefulWidget {
   ///
   /// This Container is not scaled with the animation, making this
   /// [BoxDecoration] suitable for background styling.
-  final BoxDecoration backgroundRevealableDecoration;
+  final BoxDecoration? backgroundRevealableDecoration;
 
   /// Pass-thru to the eventual ListView for size-of-content optimizations.
-  final int itemCount;
+  final int? itemCount;
 
   /// The revealable's render state if the list is empty.
   ///
@@ -85,11 +85,11 @@ class PullToRevealTopItemList extends StatefulWidget {
   final int animationRuntime;
 
   /// Pass-thru to the eventual ListView.builder function.
-  final IndexedWidgetBuilder itemBuilder;
+  final IndexedWidgetBuilder? itemBuilder;
 
   /// Pass-thru for a single builder that constructs the entire list. Use this
   /// for access to specific ListView build parameters.
-  final Widget Function(BuildContext, ScrollController) builder;
+  final Widget Function(BuildContext, ScrollController)? builder;
 
   /// The function that builds your revealable top element.
   final RevealableBuilder revealableBuilder;
@@ -98,7 +98,7 @@ class PullToRevealTopItemList extends StatefulWidget {
   final RevealableCompleter revealableCompleter;
 
   /// Optional builder that places content between the Revealable and the List.
-  final WidgetBuilder dividerBuilder;
+  final WidgetBuilder? dividerBuilder;
 
   /// Optional indicator for whether the list should dismiss a visible keyboard.
   final ScrollViewKeyboardDismissBehavior keyboardDismissBehavior;
@@ -112,23 +112,22 @@ class PullToRevealTopItemList extends StatefulWidget {
   final bool freezeOnScrollUpIfKeyboardIsVisible;
 
   PullToRevealTopItemList._({
-    @required this.revealableBuilder,
-    @required this.revealableHeight,
-    @required this.itemBuilder,
-    @required this.builder,
-    @required this.backgroundRevealableDecoration,
+    required this.backgroundRevealableDecoration,
+    required this.builder,
+    required this.dividerBuilder,
+    required this.itemBuilder,
+    required this.keyboardDismissBehavior,
+    required this.revealableBuilder,
+    required this.revealableHeight,
     this.animationRuntime = 300,
-    this.dividerBuilder,
     this.itemCount,
-    this.keyboardDismissBehavior,
     this.opacityThresholdToReveal = 0.5,
     this.revealableCompleter = RevealableCompleter.animate,
     this.revealWhenEmpty = true,
     this.startRevealed = false,
     this.freezeOnScrollUpIfKeyboardIsVisible = false,
-    Key key,
-  })  : assert(itemCount != null),
-        super(key: key);
+    Key? key,
+  }) : super(key: key);
 
   /// Builder constructor to expose complete control over the inner [ListView].
   ///
@@ -149,19 +148,20 @@ class PullToRevealTopItemList extends StatefulWidget {
   /// )
   /// ```
   factory PullToRevealTopItemList.builder({
-    @required RevealableBuilder revealableBuilder,
-    @required double revealableHeight,
-    @required Widget Function(BuildContext, ScrollController) builder,
-    BoxDecoration backgroundRevealableDecoration,
+    required RevealableBuilder revealableBuilder,
+    required double revealableHeight,
+    required Widget Function(BuildContext, ScrollController) builder,
+    BoxDecoration? backgroundRevealableDecoration,
     int animationRuntime = 300,
-    WidgetBuilder dividerBuilder,
+    WidgetBuilder? dividerBuilder,
     bool freezeOnScrollUpIfKeyboardIsVisible = false,
-    ScrollViewKeyboardDismissBehavior keyboardDismissBehavior,
+    ScrollViewKeyboardDismissBehavior keyboardDismissBehavior =
+        ScrollViewKeyboardDismissBehavior.manual,
     double opacityThresholdToReveal = 0.5,
     RevealableCompleter revealableCompleter = RevealableCompleter.animate,
     bool revealWhenEmpty = true,
     bool startRevealed = false,
-    Key key,
+    Key? key,
   }) =>
       PullToRevealTopItemList._(
         revealableBuilder: revealableBuilder,
@@ -182,20 +182,21 @@ class PullToRevealTopItemList extends StatefulWidget {
       );
 
   factory PullToRevealTopItemList({
-    @required RevealableBuilder revealableBuilder,
-    @required double revealableHeight,
-    @required IndexedWidgetBuilder itemBuilder,
+    required RevealableBuilder revealableBuilder,
+    required double revealableHeight,
+    required IndexedWidgetBuilder itemBuilder,
     int animationRuntime = 300,
-    BoxDecoration backgroundRevealableDecoration,
-    WidgetBuilder dividerBuilder,
+    BoxDecoration? backgroundRevealableDecoration,
+    WidgetBuilder? dividerBuilder,
     bool freezeOnScrollUpIfKeyboardIsVisible = false,
-    int itemCount,
-    ScrollViewKeyboardDismissBehavior keyboardDismissBehavior,
+    int? itemCount,
+    ScrollViewKeyboardDismissBehavior keyboardDismissBehavior =
+        ScrollViewKeyboardDismissBehavior.manual,
     double opacityThresholdToReveal = 0.5,
     RevealableCompleter revealableCompleter = RevealableCompleter.animate,
     bool revealWhenEmpty = true,
     bool startRevealed = false,
-    Key key,
+    Key? key,
   }) =>
       PullToRevealTopItemList._(
         revealableBuilder: revealableBuilder,
@@ -225,25 +226,24 @@ enum RevealableState { closed, closing, userScrolling, opening, open }
 /// scrolls.
 class _PullToRevealTopItemListState extends State<PullToRevealTopItemList>
     with TickerProviderStateMixin {
-  RevealableState _revealableState;
+  RevealableState _revealableState = RevealableState.closed;
   ScrollDirection _scrollDirection = ScrollDirection.idle;
   bool _isKeyboardVisible = false;
 
-  AnimationController _closeController;
-  Animation<double> _closeAnimation;
-  AnimationController _openController;
-  Animation<double> _openAnimation;
-  RevealableCompleter _revealableCompleter;
+  AnimationController? _closeController;
+  Animation<double>? _closeAnimation;
+  AnimationController? _openController;
+  Animation<double>? _openAnimation;
+  RevealableCompleter? _revealableCompleter;
 
-  ScrollController _scrollController;
-  double _lastEndScrollPosition;
+  ScrollController? _scrollController;
+  double? _lastEndScrollPosition;
 
-  double _revealableOpacity;
-  double _revealableHeight;
-  double _opacityThresholdToReveal;
-  int _animationRuntime;
+  double _revealableOpacity = 0;
+  double _revealableHeight = 0;
+  double _opacityThresholdToReveal = 1.0;
 
-  DragUpdateDetails _lastDragDetails;
+  DragUpdateDetails? _lastDragDetails;
 
   @override
   void initState() {
@@ -253,7 +253,6 @@ class _PullToRevealTopItemListState extends State<PullToRevealTopItemList>
     _revealableOpacity = widget.startRevealed ? 1 : 0;
     _revealableState =
         widget.startRevealed ? RevealableState.open : RevealableState.closed;
-    _animationRuntime = widget.animationRuntime;
     _revealableCompleter = widget.revealableCompleter;
     _lastEndScrollPosition = 0;
     KeyboardVisibilityController()
@@ -285,7 +284,7 @@ class _PullToRevealTopItemListState extends State<PullToRevealTopItemList>
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    _scrollController?.dispose();
     _closeController?.dispose();
     _openController?.dispose();
     super.dispose();
@@ -377,7 +376,7 @@ class _PullToRevealTopItemListState extends State<PullToRevealTopItemList>
   /// ushered to one of the two complete stays (fully hidden or fully revealed).
   void _onUpdateScroll(ScrollUpdateNotification notification) {
     double scrolledPixels =
-        notification.metrics.pixels - _lastEndScrollPosition;
+        notification.metrics.pixels - (_lastEndScrollPosition ?? 0);
     _scrollDirection =
         scrolledPixels > 0 ? ScrollDirection.forward : ScrollDirection.reverse;
     ScrollSource scrollSource = notification.dragDetails != null
@@ -424,7 +423,7 @@ class _PullToRevealTopItemListState extends State<PullToRevealTopItemList>
     _lastEndScrollPosition = notification.metrics.pixels;
     // Set value to zero if below zero
     _lastEndScrollPosition =
-        _lastEndScrollPosition > 0 ? _lastEndScrollPosition : 0;
+        (_lastEndScrollPosition ?? 0) > 0 ? _lastEndScrollPosition : 0;
 
     // Pushing content up and not already closing
     if (_scrollDirection == ScrollDirection.forward &&
@@ -445,18 +444,18 @@ class _PullToRevealTopItemListState extends State<PullToRevealTopItemList>
   /// to travel (if they barely crossed the threshold), or they may have 0.001%
   /// of the distance to travel. This is used in the open and closed animation
   /// controllers to keep all animation speeds consistent.
-  int get runtime => (_animationRuntime * _revealableOpacity).round();
+  int get runtime => (widget.animationRuntime * _revealableOpacity).round();
 
   void _animateOpen() {
     setToOpening();
     double _startingOpacity = _revealableOpacity;
     _openController = AnimationController(
         duration: Duration(milliseconds: runtime), vsync: this);
-    _openAnimation = Tween<double>(begin: 0, end: 1).animate(_openController)
+    _openAnimation = Tween<double>(begin: 0, end: 1).animate(_openController!)
       ..addListener(() {
         setState(() {
           _revealableOpacity =
-              (_openAnimation.value + _startingOpacity).clamp(0.0, 1.0);
+              (_openAnimation!.value + _startingOpacity).clamp(0.0, 1.0);
         });
       })
       ..addStatusListener((state) {
@@ -465,7 +464,7 @@ class _PullToRevealTopItemListState extends State<PullToRevealTopItemList>
           _revealableOpacity = 1;
         }
       });
-    _openController.forward();
+    _openController!.forward();
   }
 
   void _animateClosed() {
@@ -474,10 +473,10 @@ class _PullToRevealTopItemListState extends State<PullToRevealTopItemList>
     _closeController = AnimationController(
         duration: Duration(milliseconds: runtime), vsync: this);
     _closeAnimation =
-        Tween<double>(begin: 1.0, end: 0).animate(_closeController)
+        Tween<double>(begin: 1.0, end: 0).animate(_closeController!)
           ..addListener(() {
             setState(() {
-              _revealableOpacity = _closeAnimation.value * _startingOpacity;
+              _revealableOpacity = _closeAnimation!.value * _startingOpacity;
             });
           })
           ..addStatusListener((state) {
@@ -486,12 +485,12 @@ class _PullToRevealTopItemListState extends State<PullToRevealTopItemList>
               _revealableOpacity = 0;
             }
           });
-    _closeController.forward();
+    _closeController!.forward();
   }
 
   /// Leads to complete rendering of the "revealable" via the given
   /// [RevealableCompleter].
-  void _opener({RevealableCompleter completer}) {
+  void _opener({RevealableCompleter? completer}) {
     completer = completer ?? _revealableCompleter;
     _abortCloseAnimation();
     if (completer == RevealableCompleter.animate) {
@@ -503,7 +502,7 @@ class _PullToRevealTopItemListState extends State<PullToRevealTopItemList>
 
   /// Leads to complete hiding of the "revealable" via the given
   /// [RevealableCompleter].
-  void _closer({RevealableCompleter completer}) {
+  void _closer({RevealableCompleter? completer}) {
     completer = completer ?? _revealableCompleter;
     _abortOpenAnimation();
     if (completer == RevealableCompleter.animate) {
@@ -547,7 +546,7 @@ class _PullToRevealTopItemListState extends State<PullToRevealTopItemList>
           closer: _closer,
         ),
         widget.dividerBuilder != null
-            ? widget.dividerBuilder(context)
+            ? widget.dividerBuilder!(context)
             : Container(),
         Expanded(
           child: NotificationListener<ScrollNotification>(
@@ -558,19 +557,19 @@ class _PullToRevealTopItemListState extends State<PullToRevealTopItemList>
                 _onEndScroll(scrollNotification);
               }
               // This return value continues event propagation
-              return null;
+              return true;
             },
-            child: widget.builder == null
-                ? ListView.builder(
+            child: widget.builder != null
+                ? widget.builder!(context, _scrollController!)
+                : ListView.builder(
                     controller: _scrollController,
                     // iOS-style physics for everyone, since Android by default
                     // doesn't allow scrolling higher than the highest content
                     physics: AlwaysBouncableScrollPhysics(),
                     keyboardDismissBehavior: widget.keyboardDismissBehavior,
                     itemCount: widget.itemCount,
-                    itemBuilder: widget.itemBuilder,
-                  )
-                : widget.builder(context, _scrollController),
+                    itemBuilder: widget.itemBuilder!,
+                  ),
           ),
         ),
       ],
@@ -582,7 +581,7 @@ class _PullToRevealTopItemListState extends State<PullToRevealTopItemList>
 /// [RevealableBuilder].
 class _Revealable extends StatelessWidget {
   /// Optional decoration for a Container that wraps the entire revealed widget.
-  final BoxDecoration backgroundBoxDecoration;
+  final BoxDecoration? backgroundBoxDecoration;
 
   /// Builder for your list's top item, which is conditionally rendered
   /// depending on user scroll behavior.
@@ -600,11 +599,11 @@ class _Revealable extends StatelessWidget {
   /// Callback to force the revealed widget to appear.
   final RevealableToggler opener;
   _Revealable({
-    @required this.builder,
-    @required this.closer,
-    @required this.maxHeight,
-    @required this.opacity,
-    @required this.opener,
+    required this.builder,
+    required this.closer,
+    required this.maxHeight,
+    required this.opacity,
+    required this.opener,
     this.backgroundBoxDecoration,
   });
 
